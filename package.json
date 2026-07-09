@@ -1,0 +1,24 @@
+{
+  "name": "moon-on-the-rainbow",
+  "version": "1.0.0",
+  "description": "Interactive geometry experiment: why a Moon sitting on a rainbow must be ~87% illuminated (gibbous).",
+  "type": "module",
+  "license": "MIT",
+  "author": "P. V. (Sundar) Balakrishnan",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/moon-rainbow-math.test.mjs",
+    "e2e": "node e2e/invariance.mjs"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "playwright": "^1.61.1",
+    "vite": "^6.0.7"
+  }
+}

@@ -1,0 +1,6 @@
+node_modules/
+dist/
+e2e/screenshots/
+*.log
+.DS_Store
+PUBLISH-TO-GITHUB.cmd

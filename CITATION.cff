@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software in teaching or research, please cite it as below."
+title: "Moon on the Rainbow: an interactive geometry experiment on lunar phase and rainbow position"
+type: software
+authors:
+  - family-names: Balakrishnan
+    given-names: "P. V. (Sundar)"
+    orcid: "https://orcid.org/0000-0002-2856-5543"
+    affiliation: "University of Washington Bothell"
+year: 2026
+license: MIT
