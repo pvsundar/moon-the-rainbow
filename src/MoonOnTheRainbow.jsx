@@ -379,46 +379,53 @@ function GeometryView({ rhoDeg, elongation, k, isOnRainbow }) {
    HERO
    ================================================================ */
 
-function Hero({ stage, onStart }) {
+function Hero() {
   return (
     <header className="hero">
       <p className="eyebrow">A geometry experiment about rainbows, sunlight, and lunar phases</p>
       <h1>Moon on the Rainbow</h1>
       <p className="hero-question">Can the Moon have any phase when it appears on a rainbow?</p>
-      {stage === "intro" && (
-        <>
-          <p className="hero-invite">Drag the Moon around the sky. Then place it directly on the rainbow.</p>
-          <button className="btn-start" onClick={onStart}>
-            Start the experiment
-          </button>
-        </>
-      )}
     </header>
   );
 }
 
 /* ================================================================
-   DISCOVERY BANNER — the "87%" moment, visually dominant on the bow
+   READING CARD — the illuminated-fraction number, ALWAYS on screen.
+   Off the bow it shows the live value in a calm style; the moment the
+   Moon reaches the bow it locks to a dramatic gold ≈87% and the message
+   turns the learner from "find it" to "try to break it."
    ================================================================ */
 
-function DiscoveryBanner({ visible, k, confirmed, sweptDeg }) {
-  if (!visible) return null;
+function ReadingCard({ k, isOnRainbow, confirmed, sweptDeg, hasFoundOnce }) {
   const pct = Math.round(k * 100);
+  const phase = phaseName(k);
   let subline;
-  if (confirmed) {
-    subline = "Wherever it lands on the bow — the number does not move. That is not a coincidence.";
-  } else if (sweptDeg >= 10) {
-    subline = `Now slide it along the rainbow — you have swept ${Math.round(sweptDeg)}° so far. Try to change the number.`;
+  if (isOnRainbow) {
+    if (confirmed) {
+      subline = "It doesn't move. Anywhere on the bow, the Moon is ≈87% lit — that's the rule.";
+    } else if (sweptDeg >= 12) {
+      subline = `Keep sliding along the bow — you've swept ${Math.round(sweptDeg)}°. Is the number changing?`;
+    } else {
+      subline = "On the rainbow. Now slide the Moon along the bow and try to change this number.";
+    }
+  } else if (hasFoundOnce) {
+    subline = "Off the bow it changes freely. Put the Moon back on the rainbow…";
   } else {
-    subline = "Now slide it along the rainbow. Try to change the number.";
+    subline = "This is how lit the Moon is right now. Move it onto the rainbow to see something surprising.";
   }
   return (
-    <div className="discovery-banner" role="status" aria-live="polite">
-      <p className="banner-value">
-        ≈ {pct}% <span className="banner-unit">illuminated</span>
-      </p>
-      <p className="banner-phase">{phaseName(k)} Moon</p>
-      <p className="banner-sub">{subline}</p>
+    <div className={`reading-card ${isOnRainbow ? "on-bow" : "off-bow"}`} role="status" aria-live="polite">
+      <div className="reading-main">
+        <span className="reading-pct">
+          {pct}
+          <span className="reading-sign">%</span>
+        </span>
+        <span className="reading-side">
+          <span className="reading-illum">illuminated</span>
+          <span className="reading-phase">{phase} Moon</span>
+        </span>
+      </div>
+      <p className="reading-sub">{subline}</p>
     </div>
   );
 }
@@ -541,9 +548,9 @@ function TeacherPanel({ open, onClose, rhoDeg, elongation, k }) {
 
 export default function MoonOnTheRainbow() {
   const svgRef = useRef(null);
-  const [stage, setStage] = useState("intro");
+  const [stage, setStage] = useState("exploring"); // experiment is visible immediately — no hidden gate
   // (ρ, φ) is the single source of truth for the Moon's position.
-  const [rhoPhi, setRhoPhi] = useState({ rho: 78, phi: 0 });
+  const [rhoPhi, setRhoPhi] = useState({ rho: 72, phi: 18 });
   const [dragging, setDragging] = useState(false);
   const [hasFoundOnce, setHasFoundOnce] = useState(false);
   const [teacherMode, setTeacherMode] = useState(false);
@@ -716,35 +723,33 @@ export default function MoonOnTheRainbow() {
   );
 
   const currentMaxPhi = maxPhiDeg(rhoDeg, GEOM);
-
-  let readout;
-  if (isOnRainbow) {
-    readout = ""; // the banner takes over on the bow
-  } else if (isNearRainbow) {
-    readout = "Very close — let go, and the Moon will settle onto the bow.";
-  } else if (confirmed) {
-    readout = "Move it back to the rainbow any time — the reading will be the same wherever you land.";
-  } else if (hasFoundOnce) {
-    readout = "Was that a coincidence? Bring it back to the rainbow and slide it further around.";
-  } else {
-    readout = "Drag the Moon, or use the sliders below, until it sits on the rainbow.";
-  }
+  const placeOnRainbow = useCallback(() => setFromRequested(RAINBOW_RADIUS_DEG, phiDeg), [phiDeg, setFromRequested]);
 
   return (
     <div className="app-root">
       <style>{CSS}</style>
 
-      <Hero stage={stage} onStart={() => setStage("exploring")} />
+      <Hero />
 
-      {stage !== "intro" && (
-        <main className="stage-area">
-          <p className="live-readout" aria-live="polite">
-            {readout}
-          </p>
+      <main className="stage-area">
+        <ReadingCard
+          k={k}
+          isOnRainbow={isOnRainbow}
+          confirmed={confirmed}
+          sweptDeg={sweptDeg}
+          hasFoundOnce={hasFoundOnce}
+        />
 
-          <DiscoveryBanner visible={isOnRainbow} k={k} confirmed={confirmed} sweptDeg={sweptDeg} />
+        {!isOnRainbow && (
+          <div className="snap-row">
+            <button type="button" className="snap-btn" onClick={placeOnRainbow}>
+              Put the Moon on the rainbow
+            </button>
+            <span className="snap-hint">…or drag it there yourself</span>
+          </div>
+        )}
 
-          <div className="views-grid">
+        <div className="views-grid">
             <SkyView
               svgRef={svgRef}
               moonPos={moonPos}
@@ -803,7 +808,6 @@ export default function MoonOnTheRainbow() {
 
           <DiscoveryCards confirmed={confirmed} />
         </main>
-      )}
 
       <button
         type="button"
@@ -871,23 +875,46 @@ const CSS = `
 .btn-start:focus-visible{outline:3px solid #fff;outline-offset:3px;}
 
 .stage-area{max-width:1100px;margin:0 auto;}
-.live-readout{text-align:center;font-size:15px;color:var(--text-dim);min-height:22px;margin:0 0 14px;}
 
-.discovery-banner{
-  text-align:center;margin:0 auto 18px;max-width:560px;
-  padding:14px 22px 16px;border-radius:18px;
-  background:rgba(240,169,78,0.10);border:1px solid rgba(240,169,78,0.35);
-  animation:bannerIn 0.45s cubic-bezier(.2,.8,.2,1) both;
+/* Always-on illumination reading. Calm off the bow, dramatic gold on it. */
+.reading-card{
+  text-align:center;margin:0 auto 16px;max-width:560px;
+  padding:16px 24px 18px;border-radius:18px;
+  border:1px solid var(--line);background:rgba(255,255,255,0.04);
+  transition:background 0.35s ease,border-color 0.35s ease,box-shadow 0.35s ease;
 }
-@keyframes bannerIn{from{opacity:0;transform:scale(0.94);}to{opacity:1;transform:scale(1);}}
-.banner-value{
-  font-family:'Fraunces',serif;font-weight:600;color:#fff6df;
-  font-size:clamp(34px,5vw,46px);line-height:1.05;margin:0;
-  text-shadow:0 0 24px rgba(255,246,223,0.35);
+.reading-card.on-bow{
+  background:rgba(240,169,78,0.12);border-color:rgba(240,169,78,0.55);
+  box-shadow:0 0 40px rgba(240,169,78,0.18);
+  animation:cardPop 0.45s cubic-bezier(.2,.8,.2,1) both;
 }
-.banner-unit{font-size:0.42em;color:var(--sun);letter-spacing:0.08em;text-transform:uppercase;}
-.banner-phase{font-family:'IBM Plex Mono',monospace;font-size:14px;letter-spacing:0.18em;text-transform:uppercase;color:var(--sun);margin:4px 0 8px;}
-.banner-sub{font-size:14px;color:var(--text-dim);margin:0;}
+@keyframes cardPop{from{transform:scale(0.96);}to{transform:scale(1);}}
+.reading-main{display:flex;align-items:center;justify-content:center;gap:16px;}
+.reading-pct{
+  font-family:'Fraunces',serif;font-weight:600;line-height:0.95;
+  font-size:clamp(48px,8vw,72px);color:var(--text);
+  transition:color 0.35s ease,text-shadow 0.35s ease;
+}
+.reading-card.on-bow .reading-pct{color:#fff6df;text-shadow:0 0 26px rgba(255,246,223,0.45);}
+.reading-sign{font-size:0.42em;margin-left:2px;color:var(--text-dim);}
+.reading-card.on-bow .reading-sign{color:var(--sun);}
+.reading-side{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:3px;}
+.reading-illum{font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-dim);}
+.reading-phase{font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--text);}
+.reading-card.on-bow .reading-phase{color:var(--sun);}
+.reading-sub{font-size:14px;color:var(--text-dim);margin:12px 0 0;min-height:20px;line-height:1.5;}
+
+.snap-row{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:0 0 22px;}
+.snap-btn{
+  font-weight:600;font-size:15px;color:#1a1105;cursor:pointer;
+  background:linear-gradient(135deg,#f0a94e,#e2665c);
+  border:none;border-radius:999px;padding:13px 26px;
+  box-shadow:0 10px 30px rgba(240,169,78,0.25);
+  transition:transform 0.18s ease;
+}
+.snap-btn:hover{transform:translateY(-1px);}
+.snap-btn:focus-visible{outline:3px solid #fff;outline-offset:3px;}
+.snap-hint{font-size:13px;color:var(--text-dim);}
 
 .views-grid{display:grid;grid-template-columns:1fr;gap:26px;}
 @media(min-width:1000px){.views-grid{grid-template-columns:3fr 2fr;align-items:start;}}
@@ -976,6 +1003,6 @@ const CSS = `
 .app-footer p{font-size:12px;color:var(--text-dim);line-height:1.6;margin:0;}
 
 @media (prefers-reduced-motion: reduce){
-  .moon-group,.moon-glow,.discovery-cards li,.btn-start,.discovery-banner{animation:none !important;transition:none !important;}
+  .moon-group,.moon-glow,.discovery-cards li,.snap-btn,.reading-card{animation:none !important;transition:none !important;}
 }
 `;
